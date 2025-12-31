@@ -1,0 +1,17 @@
+{
+	"name": "Node.js & Web",
+	"image": "mcr.microsoft.com/devcontainers/javascript-node:0-18",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"liveServer.settings.port": 5500
+			},
+			"extensions": [
+				"ritwickdey.LiveServer"
+			]
+		}
+	},
+	"forwardPorts": [
+		5500
+	]
+}
