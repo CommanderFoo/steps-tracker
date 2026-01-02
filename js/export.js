@@ -211,23 +211,23 @@ const Export = {
             <div style="display: flex; justify-content: center; z-index: 1; margin-bottom: 20px;">
                 <div style="display: flex; gap: 40px; text-align: center;">
                     <div>
-                        <div style="font-size: 32px; font-weight: 700;">${stats.total_steps.toLocaleString()}</div>
+                        <div style="font-size: 26px; font-weight: 700;">${stats.total_steps.toLocaleString()}</div>
                         <div style="font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">Steps</div>
                     </div>
                     <div>
-                        <div style="font-size: 32px; font-weight: 700;">${UI.format_distance(stats.total_distance_km, units).split(" ")[0]}</div>
+                        <div style="font-size: 26px; font-weight: 700;">${UI.format_distance(stats.total_distance_km, units).split(" ")[0]}</div>
                         <div style="font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">${units === "imperial" ? "Miles" : "Kilometers"}</div>
                     </div>
                     <div>
-                        <div style="font-size: 32px; font-weight: 700;">${stats.total_calories.toLocaleString()}</div>
+                        <div style="font-size: 26px; font-weight: 700;">${stats.total_calories.toLocaleString()}</div>
                         <div style="font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">Calories</div>
                     </div>
                     <div>
-                        <div style="font-size: 32px; font-weight: 700;">${Math.floor(stats.total_time_minutes / 60)}h ${stats.total_time_minutes % 60}m</div>
+                        <div style="font-size: 26px; font-weight: 700;">${Math.floor(stats.total_time_minutes / 60)}h ${stats.total_time_minutes % 60}m</div>
                         <div style="font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">Time</div>
                     </div>
                     <div>
-                        <div style="font-size: 32px; font-weight: 700;">${stats.average_steps.toLocaleString()}</div>
+                        <div style="font-size: 26px; font-weight: 700;">${stats.average_steps.toLocaleString()}</div>
                         <div style="font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">Daily Avg</div>
                     </div>
                 </div>
