@@ -28,6 +28,8 @@ const State = {
 		calorie_method: "met",
 		include_weekends: false,
 		dark_mode: "dark",
+		secret_key: "",
+		sync_endpoint: "",
 		last_backup: Date.now(),
 		last_backup_reminder: 0
 	},
@@ -40,7 +42,9 @@ const State = {
 	},
 
 	init(stored_data) {
-		this.data.settings = stored_data.settings || { ...this.default_settings }
+
+		// Merge stored settings with defaults to ensure new fields have values
+		this.data.settings = { ...this.default_settings, ...(stored_data.settings || {}) }
 		this.data.entries = stored_data.entries || []
 		this.data.awards = stored_data.awards || []
 		this.data.records = stored_data.records || { ...this.default_records }

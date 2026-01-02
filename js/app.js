@@ -11,7 +11,48 @@ import Charts from "./charts.js"
 import Awards from "./awards.js"
 import Export from "./export.js"
 import Calendar_Picker from "./calendar.js"
+import Sync from "./sync.js"
 import { get_date_string } from "./utils.js"
+
+/**
+ * Trigger sync to leaderboard with all stats
+ */
+function trigger_sync() {
+
+	const settings = State.get_settings()
+
+	if (!settings.secret_key || !settings.sync_endpoint) {
+		return
+	}
+
+	const entries = State.get_entries()
+	const today = new Date()
+
+	// Calculate all-time stats
+	const all_stats = Calculations.aggregate_entries(entries)
+
+	// Calculate today's stats
+	const today_entry = State.get_today_entry()
+	const daily_steps = today_entry?.steps || 0
+	const daily_calories = today_entry?.calories || 0
+
+	// Calculate this week's stats
+	const week_start = Calculations.get_week_start(today)
+	const week_end = Calculations.get_week_end(today)
+	const week_entries = Calculations.get_entries_in_range(entries, week_start, week_end)
+	const week_stats = Calculations.aggregate_entries(week_entries)
+
+	// Build stats object to sync
+	const sync_stats = {
+		total_steps: all_stats.total_steps,
+		daily_steps: daily_steps,
+		weekly_steps: week_stats.total_steps,
+		daily_calories: daily_calories,
+		weekly_calories: week_stats.total_calories
+	}
+
+	Sync.sync_to_leaderboard(settings.sync_endpoint, settings.secret_key, sync_stats)
+}
 
 // Icons (Lucide-style SVG)
 const Icons = {
@@ -33,7 +74,9 @@ const Icons = {
 	sun: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
 	moon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
 	zap: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
-	info: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`
+	info: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`,
+	eye: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
+	eye_off: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`
 }
 
 // Store deleted entry for undo
@@ -325,6 +368,9 @@ function handle_entry_submit(e) {
 	UI.close_modal("entry-modal")
 	UI.show_toast("Entry saved!", "success")
 
+	// Sync to leaderboard
+	trigger_sync()
+
 	// Refresh current view
 	Router.handle_route()
 }
@@ -349,11 +395,15 @@ function handle_entry_delete() {
 			if (deleted_entry) {
 				State.add_entry(deleted_entry)
 				deleted_entry = null
+				trigger_sync()
 				Router.handle_route()
 				UI.show_toast("Entry restored!", "success")
 			}
 		}
 	})
+
+	// Sync to leaderboard after delete
+	trigger_sync()
 
 	Router.handle_route()
 }
@@ -977,6 +1027,77 @@ function render_records_view() {
 }
 
 /**
+ * Load and render leaderboard data
+ * @param {string} endpoint - Sync endpoint URL
+ * @param {string} type - Leaderboard type (default: total_steps)
+ */
+async function load_leaderboard(endpoint, type = "total_steps") {
+
+	const container = document.getElementById("leaderboard-container")
+
+	if (!container) {
+		return
+	}
+
+	if (!endpoint) {
+		container.innerHTML = `
+			<div style="text-align: center; padding: var(--space-md); color: var(--color-text-muted);">
+				Configure sync endpoint in Settings to view leaderboard
+			</div>
+		`
+		return
+	}
+
+	// Show loading state
+	container.innerHTML = `
+		<div style="text-align: center; padding: var(--space-lg); color: var(--color-text-muted);">
+			Loading...
+		</div>
+	`
+
+	const result = await Sync.fetch_leaderboard(endpoint, type)
+
+	if (!result || !result.leaderboard || result.leaderboard.length === 0) {
+		container.innerHTML = `
+			<div style="text-align: center; padding: var(--space-md); color: var(--color-text-muted);">
+				No leaderboard data available
+			</div>
+		`
+		return
+	}
+
+	// Determine unit suffix based on type
+	const is_calories = type.includes("calories")
+	const unit_suffix = is_calories ? " cal" : ""
+
+	// Render leaderboard rows
+	const rows_html = result.leaderboard.map(entry => {
+
+		const rank_style = entry.rank === 1 ? "color: #fbbf24;" :
+			entry.rank === 2 ? "color: #9ca3af;" :
+				entry.rank === 3 ? "color: #cd7f32;" : ""
+
+		const rank_emoji = entry.rank === 1 ? "🥇" :
+			entry.rank === 2 ? "🥈" :
+				entry.rank === 3 ? "🥉" : `#${entry.rank}`
+
+		return `
+			<div class="list-item" style="margin-bottom: var(--space-sm);">
+				<div class="list-item-icon" style="font-weight: 700; font-size: 1.1em; min-width: 40px; ${rank_style}">
+					${rank_emoji}
+				</div>
+				<div class="list-item-content">
+					<div class="list-item-title">${UI.escapeHTML(entry.name)}</div>
+				</div>
+				<div class="list-item-value">${UI.format_number(entry.value)}${unit_suffix}</div>
+			</div>
+		`
+	}).join("")
+
+	container.innerHTML = rows_html
+}
+
+/**
  * Render Awards view
  */
 function render_awards_view() {
@@ -1099,7 +1220,26 @@ function render_awards_view() {
 
 	const global_percent = Math.round((award_count.unlocked / award_count.total) * 100) || 0
 
+	// Initial render with loading state for leaderboard
 	container.innerHTML = `
+		<div class="section" id="leaderboard-section">
+			<div class="section-title" style="display: flex; align-items: center; gap: var(--space-sm);">
+				<span>🏅</span> Leaderboard
+			</div>
+			<div class="card" style="display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-sm);" id="leaderboard-tabs">
+				<button class="btn btn-primary btn-sm" data-type="total_steps">Total Steps</button>
+				<button class="btn btn-secondary btn-sm" data-type="daily_steps">Daily Steps</button>
+				<button class="btn btn-secondary btn-sm" data-type="weekly_steps">Weekly Steps</button>
+				<button class="btn btn-secondary btn-sm" data-type="daily_calories">Daily Cal</button>
+				<button class="btn btn-secondary btn-sm" data-type="weekly_calories">Weekly Cal</button>
+			</div>
+			<div class="card" id="leaderboard-container">
+				<div style="text-align: center; padding: var(--space-lg); color: var(--color-text-muted);">
+					Loading leaderboard...
+				</div>
+			</div>
+		</div>
+
 		<div class="section">
 			<div class="card" style="margin-bottom: var(--space-md); background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-primary) 100%); color: white; padding: 20px;">
 				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -1124,6 +1264,31 @@ function render_awards_view() {
 			Tap or hover on an award to see its description and requirements.
 		</p>
 	`
+
+	// Fetch and render leaderboard if endpoint is configured
+	load_leaderboard(settings.sync_endpoint, "total_steps")
+
+	// Add tab click handlers
+	const tabs_container = document.getElementById("leaderboard-tabs")
+
+	tabs_container?.addEventListener("click", (e) => {
+
+		const btn = e.target.closest("button[data-type]")
+
+		if (!btn) {
+			return
+		}
+
+		const type = btn.dataset.type
+
+		// Update active tab styling
+		tabs_container.querySelectorAll("button").forEach(b => {
+			b.className = b === btn ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm"
+		})
+
+		// Load the selected leaderboard
+		load_leaderboard(settings.sync_endpoint, type)
+	})
 
 	// Auto-clear new awards after viewing the page
 	if (new_award_ids.length > 0) {
@@ -1225,6 +1390,43 @@ function render_settings_view() {
             </div>
 
             <div class="section">
+                <h3 class="section-title">
+                    Sync
+                    <span class="info-icon" data-tooltip="Configure sync to send your step totals to a leaderboard server.">
+                        ${Icons.info}
+                    </span>
+                </h3>
+                <div class="card">
+                    <div class="form-group">
+                        <label class="form-label">Sync Endpoint URL</label>
+                        <input type="url" class="form-input" id="setting-sync-endpoint"
+                            value="${UI.escapeHTML(settings.sync_endpoint || '')}"
+                            placeholder="https://example.com/api"
+                            autocomplete="off">
+                        <p class="form-hint">The URL to send your step data to.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Personal Secret Key</label>
+                        <div class="password-input-container">
+                            <input type="password" class="form-input" id="setting-secret-key"
+                                value="${UI.escapeHTML(settings.secret_key || '')}"
+                                placeholder="Enter your secret key"
+                                autocomplete="off">
+                            <button type="button" class="password-toggle-btn" id="toggle-secret-key" aria-label="Toggle visibility">
+                                ${Icons.eye}
+                            </button>
+                        </div>
+                        <p class="form-hint">This key uniquely identifies you. Keep it private.</p>
+                    </div>
+
+                    <button type="button" class="btn btn-ghost btn-sm" id="clear-sync-settings" style="margin-top: calc(-1 * var(--space-sm));">
+                        ${Icons.trash} Clear Sync Settings
+                    </button>
+                </div>
+            </div>
+
+            <div class="section">
                 <button type="submit" class="btn btn-primary btn-block">Save Settings</button>
             </div>
         </form>
@@ -1304,11 +1506,39 @@ function render_settings_view() {
 	// Reset data
 	document.getElementById("reset-data-btn").addEventListener("click", () => {
 		if (confirm("Are you sure you want to reset all data? This cannot be undone.")) {
+			// Get secret key before reset (so we can sync 0 steps)
+			const settings = State.get_settings()
+			const secret_key = settings?.secret_key
+
 			Storage.clear_all()
 			State.reset()
 			UI.show_toast("All data reset", "warning")
+
+			// Sync 0 steps to leaderboard
+			if (secret_key) {
+				Sync.sync_to_leaderboard(secret_key, 0)
+			}
+
 			Router.handle_route()
 		}
+	})
+
+	// Toggle secret key visibility
+	const toggle_btn = document.getElementById("toggle-secret-key")
+	const secret_input = document.getElementById("setting-secret-key")
+	let key_visible = false
+
+	toggle_btn?.addEventListener("click", () => {
+		key_visible = !key_visible
+		secret_input.type = key_visible ? "text" : "password"
+		toggle_btn.innerHTML = key_visible ? Icons.eye_off : Icons.eye
+	})
+
+	// Clear sync settings
+	document.getElementById("clear-sync-settings")?.addEventListener("click", () => {
+		document.getElementById("setting-sync-endpoint").value = ""
+		document.getElementById("setting-secret-key").value = ""
+		UI.show_toast("Sync settings cleared. Click Save to apply.", "warning")
 	})
 }
 
@@ -1319,6 +1549,11 @@ function render_settings_view() {
 function handle_settings_submit(e) {
 	e.preventDefault()
 
+	const secret_key_raw = document.getElementById("setting-secret-key").value
+	const secret_key = secret_key_raw ? secret_key_raw.trim() : ""
+	const sync_endpoint_raw = document.getElementById("setting-sync-endpoint").value
+	const sync_endpoint = sync_endpoint_raw ? sync_endpoint_raw.trim() : ""
+
 	const new_settings = {
 		height_cm: parseInt(document.getElementById("setting-height").value) || 175,
 		weight_kg: parseInt(document.getElementById("setting-weight").value) || 70,
@@ -1327,7 +1562,9 @@ function handle_settings_submit(e) {
 		units: document.getElementById("setting-units").value,
 		include_weekends: document.getElementById("setting-include-weekends").checked,
 		dark_mode: document.getElementById("setting-theme").value,
-		calorie_method: document.getElementById("setting-calorie-method").value
+		calorie_method: document.getElementById("setting-calorie-method").value,
+		secret_key: secret_key,
+		sync_endpoint: sync_endpoint
 	}
 
 	State.update_settings(new_settings)

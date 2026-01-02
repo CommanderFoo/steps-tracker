@@ -331,6 +331,39 @@
 	margin-top: var(--space-xs);
 }
 
+/* Password input with toggle */
+.password-input-container {
+	display: flex;
+	gap: var(--space-sm);
+}
+
+.password-input-container .form-input {
+	flex: 1;
+}
+
+.password-toggle-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	color: var(--color-text-muted);
+	cursor: pointer;
+	transition: all var(--transition-fast);
+}
+
+.password-toggle-btn:hover {
+	background: var(--color-border);
+	color: var(--color-text);
+}
+
+.password-toggle-btn svg {
+	width: 18px;
+	height: 18px;
+}
+
 /* Toggle switch */
 .toggle {
 	position: relative;
