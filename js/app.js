@@ -42,6 +42,13 @@ function trigger_sync() {
 	const week_entries = Calculations.get_entries_in_range(entries, week_start, week_end)
 	const week_stats = Calculations.aggregate_entries(week_entries)
 
+	// Calculate longest session
+	const longest_session = entries.length > 0 ? Math.max(...entries.map(e => e.time_minutes || 0)) : 0
+
+	// Calculate award count
+	const awards = State.get("awards")
+	const award_count = Awards.get_count(awards).unlocked
+
 	// Build stats object to sync
 	const sync_stats = {
 		total_steps: all_stats.total_steps,
@@ -49,7 +56,9 @@ function trigger_sync() {
 		daily_steps: daily_steps,
 		weekly_steps: week_stats.total_steps,
 		daily_calories: daily_calories,
-		weekly_calories: week_stats.total_calories
+		weekly_calories: week_stats.total_calories,
+		longest_session: longest_session,
+		total_awards: award_count
 	}
 
 	Sync.sync_to_leaderboard(settings.sync_endpoint, settings.secret_key, sync_stats)
@@ -1088,7 +1097,9 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 		return
 	}
 
-	// All leaderboards now show steps and calories
+	// Check leaderboard type
+	const is_longest = type === "longest_session"
+	const is_awards = type === "total_awards"
 
 	// Render leaderboard rows
 	const rows_html = result.leaderboard.map(entry => {
@@ -1100,6 +1111,34 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 		const rank_emoji = entry.rank === 1 ? "🥇" :
 			entry.rank === 2 ? "🥈" :
 				entry.rank === 3 ? "🥉" : `#${entry.rank}`
+
+		if (is_longest) {
+			return `
+				<div class="list-item" style="margin-bottom: var(--space-sm);">
+					<div class="list-item-icon" style="font-weight: 700; font-size: 1.1em; min-width: 40px; ${rank_style}">
+						${rank_emoji}
+					</div>
+					<div class="list-item-content" style="flex: 1;">
+						<div class="list-item-title">${UI.escapeHTML(entry.name)}</div>
+					</div>
+					<div style="text-align: right; min-width: 80px; font-weight: 600;">${UI.format_duration(entry.value)}</div>
+				</div>
+			`
+		}
+
+		if (is_awards) {
+			return `
+				<div class="list-item" style="margin-bottom: var(--space-sm);">
+					<div class="list-item-icon" style="font-weight: 700; font-size: 1.1em; min-width: 40px; ${rank_style}">
+						${rank_emoji}
+					</div>
+					<div class="list-item-content" style="flex: 1;">
+						<div class="list-item-title">${UI.escapeHTML(entry.name)}</div>
+					</div>
+					<div style="text-align: right; min-width: 80px; font-weight: 600;">${UI.format_number(entry.value)} 🎖️</div>
+				</div>
+			`
+		}
 
 		return `
 			<div class="list-item" style="margin-bottom: var(--space-sm);">
@@ -1116,14 +1155,34 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 	}).join("")
 
 	// Add header row
-	const header_html = `
-		<div class="list-item" style="margin-bottom: var(--space-sm); padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-border); font-size: 0.8em; color: var(--color-text-muted);">
-			<div style="min-width: 40px;"></div>
-			<div style="flex: 1;">Name</div>
-			<div style="text-align: right; min-width: 80px;">Steps</div>
-			<div style="text-align: right; min-width: 70px;">Calories</div>
-		</div>
-	`
+	let header_html = ""
+
+	if (is_longest) {
+		header_html = `
+			<div class="list-item" style="margin-bottom: var(--space-sm); padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-border); font-size: 0.8em; color: var(--color-text-muted);">
+				<div style="min-width: 40px;"></div>
+				<div style="flex: 1;">Name</div>
+				<div style="text-align: right; min-width: 80px;">Time</div>
+			</div>
+		`
+	} else if (is_awards) {
+		header_html = `
+			<div class="list-item" style="margin-bottom: var(--space-sm); padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-border); font-size: 0.8em; color: var(--color-text-muted);">
+				<div style="min-width: 40px;"></div>
+				<div style="flex: 1;">Name</div>
+				<div style="text-align: right; min-width: 80px;">Awards</div>
+			</div>
+		`
+	} else {
+		header_html = `
+			<div class="list-item" style="margin-bottom: var(--space-sm); padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-border); font-size: 0.8em; color: var(--color-text-muted);">
+				<div style="min-width: 40px;"></div>
+				<div style="flex: 1;">Name</div>
+				<div style="text-align: right; min-width: 80px;">Steps</div>
+				<div style="text-align: right; min-width: 70px;">Calories</div>
+			</div>
+		`
+	}
 
 	container.innerHTML = header_html + rows_html
 }
@@ -1261,6 +1320,8 @@ function render_awards_view() {
 			<div class="card" style="display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-sm);" id="leaderboard-tabs">
 				<button class="btn btn-primary btn-sm" data-type="daily">Daily</button>
 				<button class="btn btn-secondary btn-sm" data-type="weekly">Weekly</button>
+				<button class="btn btn-secondary btn-sm" data-type="longest_session">Longest</button>
+				<button class="btn btn-secondary btn-sm" data-type="total_awards">Awards</button>
 				<button class="btn btn-secondary btn-sm" data-type="overall">All-Time</button>
 			</div>
 			<div class="card" id="leaderboard-container"></div>
@@ -1595,6 +1656,9 @@ function handle_settings_submit(e) {
 
 	State.update_settings(new_settings)
 	UI.show_toast("Settings saved!", "success")
+
+	// Trigger sync after saving settings
+	trigger_sync()
 }
 
 /**

@@ -55,6 +55,14 @@ const Sync = {
 				url.searchParams.set("weekly_calories", Math.floor(stats.weekly_calories).toString())
 			}
 
+			if (typeof stats.longest_session === "number") {
+				url.searchParams.set("longest_session", Math.floor(stats.longest_session).toString())
+			}
+
+			if (typeof stats.total_awards === "number") {
+				url.searchParams.set("total_awards", Math.floor(stats.total_awards).toString())
+			}
+
 			const response = await fetch(url.toString(), {
 				method: "GET",
 				mode: "cors"
