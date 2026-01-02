@@ -35,6 +35,10 @@ const Sync = {
 				url.searchParams.set("total_steps", Math.floor(stats.total_steps).toString())
 			}
 
+			if (typeof stats.total_calories === "number") {
+				url.searchParams.set("total_calories", Math.floor(stats.total_calories).toString())
+			}
+
 			if (typeof stats.daily_steps === "number") {
 				url.searchParams.set("daily_steps", Math.floor(stats.daily_steps).toString())
 			}
