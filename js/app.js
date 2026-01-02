@@ -45,6 +45,7 @@ function trigger_sync() {
 	// Build stats object to sync
 	const sync_stats = {
 		total_steps: all_stats.total_steps,
+		total_calories: all_stats.total_calories,
 		daily_steps: daily_steps,
 		weekly_steps: week_stats.total_steps,
 		daily_calories: daily_calories,
@@ -273,19 +274,35 @@ function open_entry_modal(date = null) {
 			}
 		}
 	} else {
-		modal_title.textContent = "Add Entry"
-		delete form.dataset.editDate
-
+		// Opening for "Add Entry" - check if today already has an entry
 		const today = new Date()
 		const d_year = today.getFullYear()
 		const d_month = String(today.getMonth() + 1).padStart(2, "0")
 		const d_day = String(today.getDate()).padStart(2, "0")
-		initial_date = `${d_year}-${d_month}-${d_day}`
+		const today_date = `${d_year}-${d_month}-${d_day}`
 
+		initial_date = today_date
 		date_input.value = initial_date
 
-		if (delete_btn) {
-			delete_btn.classList.add("hidden")
+		// Check for existing entry for today and pre-fill
+		const existing_entry = State.get_entry_by_date(today_date)
+
+		if (existing_entry) {
+			modal_title.textContent = "Update Today"
+			form.dataset.editDate = today_date
+			document.getElementById("entry-steps").value = existing_entry.steps || ""
+			document.getElementById("entry-time").value = existing_entry.time_minutes || ""
+
+			if (delete_btn) {
+				delete_btn.classList.remove("hidden")
+			}
+		} else {
+			modal_title.textContent = "Add Entry"
+			delete form.dataset.editDate
+
+			if (delete_btn) {
+				delete_btn.classList.add("hidden")
+			}
 		}
 	}
 
@@ -1048,14 +1065,19 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 		return
 	}
 
-	// Show loading state
-	container.innerHTML = `
-		<div style="text-align: center; padding: var(--space-lg); color: var(--color-text-muted);">
-			Loading...
-		</div>
-	`
+	// Show spinner in title
+	const spinner = document.getElementById("leaderboard-spinner")
+
+	if (spinner) {
+		spinner.style.display = "inline-block"
+	}
 
 	const result = await Sync.fetch_leaderboard(endpoint, type)
+
+	// Hide spinner
+	if (spinner) {
+		spinner.style.display = "none"
+	}
 
 	if (!result || !result.leaderboard || result.leaderboard.length === 0) {
 		container.innerHTML = `
@@ -1066,9 +1088,7 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 		return
 	}
 
-	// Determine unit suffix based on type
-	const is_calories = type.includes("calories")
-	const unit_suffix = is_calories ? " cal" : ""
+	// All leaderboards now show steps and calories
 
 	// Render leaderboard rows
 	const rows_html = result.leaderboard.map(entry => {
@@ -1086,15 +1106,26 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 				<div class="list-item-icon" style="font-weight: 700; font-size: 1.1em; min-width: 40px; ${rank_style}">
 					${rank_emoji}
 				</div>
-				<div class="list-item-content">
+				<div class="list-item-content" style="flex: 1;">
 					<div class="list-item-title">${UI.escapeHTML(entry.name)}</div>
 				</div>
-				<div class="list-item-value">${UI.format_number(entry.value)}${unit_suffix}</div>
+				<div style="text-align: right; min-width: 80px; font-weight: 600;">${UI.format_number(entry.steps)}</div>
+				<div style="text-align: right; min-width: 70px; color: var(--color-text-muted); font-size: 0.9em;">${UI.format_number(entry.calories)} cal</div>
 			</div>
 		`
 	}).join("")
 
-	container.innerHTML = rows_html
+	// Add header row
+	const header_html = `
+		<div class="list-item" style="margin-bottom: var(--space-sm); padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-border); font-size: 0.8em; color: var(--color-text-muted);">
+			<div style="min-width: 40px;"></div>
+			<div style="flex: 1;">Name</div>
+			<div style="text-align: right; min-width: 80px;">Steps</div>
+			<div style="text-align: right; min-width: 70px;">Calories</div>
+		</div>
+	`
+
+	container.innerHTML = header_html + rows_html
 }
 
 /**
@@ -1225,19 +1256,14 @@ function render_awards_view() {
 		<div class="section" id="leaderboard-section">
 			<div class="section-title" style="display: flex; align-items: center; gap: var(--space-sm);">
 				<span>🏅</span> Leaderboard
+				<span class="spinner" id="leaderboard-spinner" style="width: 16px; height: 16px; display: inline-block;"></span>
 			</div>
 			<div class="card" style="display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-sm);" id="leaderboard-tabs">
-				<button class="btn btn-primary btn-sm" data-type="total_steps">Total Steps</button>
-				<button class="btn btn-secondary btn-sm" data-type="daily_steps">Daily Steps</button>
-				<button class="btn btn-secondary btn-sm" data-type="weekly_steps">Weekly Steps</button>
-				<button class="btn btn-secondary btn-sm" data-type="daily_calories">Daily Cal</button>
-				<button class="btn btn-secondary btn-sm" data-type="weekly_calories">Weekly Cal</button>
+				<button class="btn btn-primary btn-sm" data-type="daily">Daily</button>
+				<button class="btn btn-secondary btn-sm" data-type="weekly">Weekly</button>
+				<button class="btn btn-secondary btn-sm" data-type="overall">All-Time</button>
 			</div>
-			<div class="card" id="leaderboard-container">
-				<div style="text-align: center; padding: var(--space-lg); color: var(--color-text-muted);">
-					Loading leaderboard...
-				</div>
-			</div>
+			<div class="card" id="leaderboard-container"></div>
 		</div>
 
 		<div class="section">
@@ -1266,7 +1292,7 @@ function render_awards_view() {
 	`
 
 	// Fetch and render leaderboard if endpoint is configured
-	load_leaderboard(settings.sync_endpoint, "total_steps")
+	load_leaderboard(settings.sync_endpoint, "daily")
 
 	// Add tab click handlers
 	const tabs_container = document.getElementById("leaderboard-tabs")
