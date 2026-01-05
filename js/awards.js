@@ -1852,6 +1852,7 @@ const Awards = {
 				progress,
 				current_value,
 				date: unlocked_map[def.id]?.date || null,
+				viewed: unlocked_map[def.id]?.viewed || false,
 				difficulty: this.get_difficulty(def)
 			}
 		})

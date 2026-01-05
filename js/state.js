@@ -27,6 +27,7 @@ const State = {
 		units: "imperial",
 		calorie_method: "met",
 		include_weekends: false,
+		hide_completed_awards: false,
 		dark_mode: "dark",
 		secret_key: "",
 		sync_endpoint: "",
@@ -146,7 +147,8 @@ const State = {
 			this.data.awards.push({
 				id: award_id,
 				achieved: true,
-				date: date
+				date: date,
+				viewed: false
 			})
 
 			// Track as newly unlocked
@@ -169,6 +171,23 @@ const State = {
 	clear_new_awards() {
 		this.new_awards = []
 		this.notify_listeners()
+	},
+
+	mark_all_awards_viewed() {
+		let updated = false
+
+		this.data.awards.forEach(a => {
+			if (a.achieved && !a.viewed) {
+				a.viewed = true
+				updated = true
+			}
+		})
+
+		if (updated) {
+			this.notify_listeners()
+		}
+
+		return updated
 	},
 
 	is_award_unlocked(award_id) {

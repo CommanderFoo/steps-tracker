@@ -1406,11 +1406,17 @@ function render_awards_view() {
 	}
 
 	const render_section = (diff) => {
-		const items = grouped[diff]
-		const unlocked = items.filter(a => a.achieved).length
-		const total = items.length
+		const all_items = grouped[diff]
+		// Only hide if achieved AND viewed AND setting is on
+		const items = settings.hide_completed_awards ? all_items.filter(a => !(a.achieved && a.viewed)) : all_items
+		const unlocked = all_items.filter(a => a.achieved).length
+		const total = all_items.length
 		const percent = Math.round((unlocked / total) * 100) || 0
 		const label = difficulty_labels[diff]
+
+		if (settings.hide_completed_awards && items.length === 0) {
+			return ""
+		}
 
 		return `
 			<div class="section">
@@ -1465,6 +1471,16 @@ function render_awards_view() {
 					<span>${award_count.unlocked} of ${award_count.total} awards unlocked</span>
 					<span>${award_count.total - award_count.unlocked} to go!</span>
 				</div>
+
+				<div class="divider" style="background: rgba(255,255,255,0.2); margin: var(--space-md) 0;"></div>
+
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<div style="font-size: var(--font-size-sm); font-weight: 600;">Hide Completed Awards</div>
+					<div class="toggle-switch">
+						<input type="checkbox" id="toggle-hide-completed" ${settings.hide_completed_awards ? "checked" : ""}>
+						<span class="slider" style="background-color: rgba(255,255,255,0.2);"></span>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -1500,6 +1516,12 @@ function render_awards_view() {
 		load_leaderboard(settings.sync_endpoint, type)
 	})
 
+	// Toggle hide completed listener
+	document.getElementById("toggle-hide-completed")?.addEventListener("change", (e) => {
+		State.update_settings({ hide_completed_awards: e.target.checked })
+		render_awards_view()
+	})
+
 	// Auto-clear new awards after viewing the page
 	if (new_award_ids.length > 0) {
 		// Small delay so user can see the "NEW" labels before they clear
@@ -1508,6 +1530,9 @@ function render_awards_view() {
 			update_awards_badge()
 		}, 500)
 	}
+
+	// Mark currently unlocked awards as viewed so they hide next time
+	State.mark_all_awards_viewed()
 }
 
 /**
@@ -1596,6 +1621,14 @@ function render_settings_view() {
                             <span class="slider"></span>
                         </div>
                     </div>
+                    <div class="divider"></div>
+                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+                        <label class="form-label" style="margin: 0;">Hide Completed Awards</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="setting-hide-completed" ${settings.hide_completed_awards ? "checked" : ""}>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1668,6 +1701,7 @@ function render_settings_view() {
 						<strong style="color: var(--color-primary);">January 5, 2026</strong>
 					</div>
 					<ul style="margin: 0; padding-left: var(--space-lg); color: var(--color-text-secondary);">
+						<li style="margin-bottom: var(--space-xs);"><strong>Hide Completed Awards</strong> - You can now hide achieved awards from your collection to focus on what's left. Toggle it on the Awards page or in Settings.</li>
 						<li style="margin-bottom: var(--space-xs);"><strong>Additive Steps for Today</strong> - When adding steps for today, they now add to your existing count instead of replacing it. Editing from history still replaces the total.</li>
 						<li style="margin-bottom: var(--space-xs);"><strong>Additive Active Time</strong> - Same behavior for active time minutes.</li>
 						<li style="margin-bottom: var(--space-xs);"><strong>Themed Number Inputs</strong> - Custom +/- buttons with gradient styling that match the app theme.</li>
@@ -1814,6 +1848,7 @@ function handle_settings_submit(e) {
 		include_weekends: document.getElementById("setting-include-weekends").checked,
 		dark_mode: document.getElementById("setting-theme").value,
 		calorie_method: document.getElementById("setting-calorie-method").value,
+		hide_completed_awards: document.getElementById("setting-hide-completed").checked,
 		secret_key: secret_key,
 		sync_endpoint: sync_endpoint
 	}
