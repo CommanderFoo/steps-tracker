@@ -1483,10 +1483,6 @@ function render_awards_view() {
 	const global_percent = Math.round((award_count.unlocked / award_count.total) * 100) || 0
 
 	container.innerHTML = `
-		<div class="page-header">
-			<h1>Awards & Leaderboard</h1>
-		</div>
-
 		<div class="section" id="leaderboard-section">
 			<div class="section-title" style="display: flex; align-items: center; gap: var(--space-sm);">
 				<span>🏅</span> Leaderboard
