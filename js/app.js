@@ -89,6 +89,71 @@ const Icons = {
 	eye_off: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`
 }
 
+/**
+ * Format text with proper units (supports imperial conversion)
+ */
+function format_units_global(text, units) {
+	if (units === "imperial") {
+		// Convert km mentions to miles
+		return text
+			.replace(/([\d,]+\.?\d*)\s*Kilometers?/g, (match, num) => {
+				const clean_num = parseFloat(num.replace(/,/g, ""))
+				const miles = (clean_num * 0.621371).toFixed(1)
+
+				return `${UI.format_number(miles)} Miles`
+			})
+			.replace(/([\d,]+\.?\d*)\s*kilometers?/g, (match, num) => {
+				const clean_num = parseFloat(num.replace(/,/g, ""))
+				const miles = (clean_num * 0.621371).toFixed(1)
+
+				return `${UI.format_number(miles)} miles`
+			})
+			.replace(/(\d+\.?\d*)\s*km\/h/gi, (match, num) => {
+				const mph = (parseFloat(num) * 0.621371).toFixed(1)
+
+				return `${mph} mph`
+			})
+			.replace(/(\d+\.?\d*)\s*km/gi, (match, num) => {
+				const miles = (parseFloat(num) * 0.621371).toFixed(1)
+
+				return `${UI.format_number(miles)} mi`
+			})
+			// Title specific replacements
+			.replace("First Kilometer", "First Mile")
+			.replace("5K Cumulative", "3.1 Mile Cumulative")
+			.replace("10K Club", "6.2 Mile Club")
+			.replace("50K Trekker", "31 Mile Trekker")
+			.replace("Cross-Country Casual", "Cross-Country (155 mi)")
+			.replace("Road Warrior", "Road Warrior (310 mi)")
+			.replace("Grand Tour", "Grand Tour (621 mi)")
+			.replace("Half Marathon", "Half Marathon (13.1 mi)")
+			.replace("Marathon", "Marathon (26.2 mi)")
+	}
+
+	return text
+}
+
+/**
+ * Render a single award badge
+ */
+function render_award_badge_global(a, new_award_ids, units) {
+	const is_new = new_award_ids.includes(a.id)
+	const tooltip_text = UI.escapeHTML(format_units_global(a.description || "", units))
+	const title_text = UI.escapeHTML(format_units_global(a.title || "", units))
+
+	return `
+		<div class="award-badge ${a.achieved ? "" : "locked"} ${is_new ? "new" : ""}" data-tooltip="${tooltip_text}" tabindex="0">
+			<div class="award-icon-container" ${!a.achieved && a.progress !== null ? `style="--progress: ${Math.round(a.progress * 100)}"` : ""}>
+				${!a.achieved && a.progress !== null ? `<div class="award-radial-progress"></div>` : ""}
+				<div class="award-badge-icon">${a.icon}</div>
+				${!a.achieved && a.progress !== null ? `<div class="award-progress-text">${Math.round(a.progress * 100)}%</div>` : ""}
+			</div>
+			<div class="award-badge-title">${title_text}</div>
+			${a.achieved ? `<div class="award-badge-date">${is_new ? "NEW!" : "✓"}</div>` : ""}
+		</div>
+	`
+}
+
 // Store deleted entry for undo
 let deleted_entry = null
 let calendar_picker = null
@@ -609,7 +674,12 @@ function render_today_view() {
                 </div>
             </div>
         </div>
+
+        <div id="today-awards-container"></div>
     `
+
+	// Render today's awards
+	render_today_awards_section(settings)
 
 	// Render progress ring
 	const ring_container = document.getElementById("progress-ring-container")
@@ -621,6 +691,38 @@ function render_today_view() {
 
 	// Render mini weekly chart
 	Charts.render_mini_weekly_chart("mini-weekly-chart", week_entries, goal)
+}
+
+/**
+ * Render awards earned today on the Today page
+ */
+function render_today_awards_section(settings) {
+	const container = document.getElementById("today-awards-container")
+
+	if (!container) {
+		return
+	}
+
+	const today_date = get_date_string()
+	const all_awards = Awards.get_all_with_status(State.get("awards"), Calculations.aggregate_entries(State.get_entries()))
+	const today_awards = all_awards.filter(a => a.achieved && a.date === today_date)
+
+	if (today_awards.length === 0) {
+		container.innerHTML = ""
+
+		return
+	}
+
+	const new_award_ids = State.get_new_awards()
+
+	container.innerHTML = `
+        <div class="section">
+            <h3 class="section-title">Earned Today</h3>
+            <div class="card award-grid">
+                ${today_awards.map(a => render_award_badge_global(a, new_award_ids, settings.units)).join("")}
+            </div>
+        </div>
+    `
 }
 
 /**
@@ -1343,67 +1445,8 @@ function render_awards_view() {
 		grouped[d] = all_awards.filter(a => a.difficulty === d)
 	})
 
-	// Format text with proper units
-	const format_units = (text) => {
-		if (settings.units === "imperial") {
-			// Convert km mentions to miles
-			return text
-				.replace(/([\d,]+\.?\d*)\s*Kilometers?/g, (match, num) => {
-					const clean_num = parseFloat(num.replace(/,/g, ""))
-					const miles = (clean_num * 0.621371).toFixed(1)
-
-					return `${UI.format_number(miles)} Miles`
-				})
-				.replace(/([\d,]+\.?\d*)\s*kilometers?/g, (match, num) => {
-					const clean_num = parseFloat(num.replace(/,/g, ""))
-					const miles = (clean_num * 0.621371).toFixed(1)
-
-					return `${UI.format_number(miles)} miles`
-				})
-				.replace(/(\d+\.?\d*)\s*km\/h/gi, (match, num) => {
-					const mph = (parseFloat(num) * 0.621371).toFixed(1)
-
-					return `${mph} mph`
-				})
-				.replace(/(\d+\.?\d*)\s*km/gi, (match, num) => {
-					const miles = (parseFloat(num) * 0.621371).toFixed(1)
-
-					return `${UI.format_number(miles)} mi`
-				})
-				// Title specific replacements
-				.replace("First Kilometer", "First Mile")
-				.replace("5K Cumulative", "3.1 Mile Cumulative")
-				.replace("10K Club", "6.2 Mile Club")
-				.replace("50K Trekker", "31 Mile Trekker")
-				.replace("Cross-Country Casual", "Cross-Country (155 mi)")
-				.replace("Road Warrior", "Road Warrior (310 mi)")
-				.replace("Grand Tour", "Grand Tour (621 mi)")
-				.replace("Half Marathon", "Half Marathon (13.1 mi)")
-				.replace("Marathon", "Marathon (26.2 mi)")
-		}
-
-		return text
-	}
-
 	// Get new awards to highlight
 	const new_award_ids = State.get_new_awards()
-
-	// Render badge helper
-	const render_badge = (a) => {
-		const is_new = new_award_ids.includes(a.id)
-
-		return `
-		<div class="award-badge ${a.achieved ? "" : "locked"} ${is_new ? "new" : ""}" data-tooltip="${UI.escapeHTML(format_units(a.description))}" tabindex="0">
-			<div class="award-icon-container" ${!a.achieved && a.progress !== null ? `style="--progress: ${Math.round(a.progress * 100)}"` : ""}>
-				${!a.achieved && a.progress !== null ? `<div class="award-radial-progress"></div>` : ""}
-				<div class="award-badge-icon">${a.icon}</div>
-				${!a.achieved && a.progress !== null ? `<div class="award-progress-text">${Math.round(a.progress * 100)}%</div>` : ""}
-			</div>
-			<div class="award-badge-title">${UI.escapeHTML(format_units(a.title))}</div>
-			${a.achieved ? `<div class="award-badge-date">${is_new ? "NEW!" : "✓"}</div>` : ""}
-		</div>
-	`
-	}
 
 	const render_section = (diff) => {
 		const all_items = grouped[diff]
@@ -1431,7 +1474,7 @@ function render_awards_view() {
 					<div style="background: ${UI.escapeHTML(label.color)}; width: ${percent}%; height: 100%; border-radius: 3px; transition: width 0.5s ease;"></div>
 				</div>
 				<div class="card award-grid">
-					${items.map(render_badge).join("")}
+					${items.map(a => render_award_badge_global(a, new_award_ids, settings.units)).join("")}
 				</div>
 			</div>
 		`
@@ -1439,8 +1482,11 @@ function render_awards_view() {
 
 	const global_percent = Math.round((award_count.unlocked / award_count.total) * 100) || 0
 
-	// Initial render with loading state for leaderboard
 	container.innerHTML = `
+		<div class="page-header">
+			<h1>Awards & Leaderboard</h1>
+		</div>
+
 		<div class="section" id="leaderboard-section">
 			<div class="section-title" style="display: flex; align-items: center; gap: var(--space-sm);">
 				<span>🏅</span> Leaderboard
@@ -1498,7 +1544,6 @@ function render_awards_view() {
 	const tabs_container = document.getElementById("leaderboard-tabs")
 
 	tabs_container?.addEventListener("click", (e) => {
-
 		const btn = e.target.closest("button[data-type]")
 
 		if (!btn) {

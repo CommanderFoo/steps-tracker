@@ -474,15 +474,15 @@
 .modal-overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.5);
-	backdrop-filter: blur(4px);
+	background: rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(8px);
 	display: flex;
-	align-items: flex-end;
+	align-items: center;
 	justify-content: center;
 	z-index: var(--z-modal);
 	opacity: 0;
 	visibility: hidden;
-	transition: opacity var(--transition-base), visibility var(--transition-base);
+	transition: all var(--transition-base);
 }
 
 .modal-overlay.active {
@@ -492,50 +492,54 @@
 
 .modal {
 	background: var(--color-bg-card);
-	border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+	border-radius: var(--radius-xl);
 	padding: var(--space-xl);
 	width: 100%;
-	max-width: 500px;
+	max-width: 550px;
 	max-height: 90vh;
 	overflow-y: auto;
-	transform: translateY(100%);
-	transition: transform var(--transition-base);
+	transform: scale(0.9) translateY(20px);
+	transition: all var(--transition-base);
+	box-shadow: var(--shadow-2xl);
 }
 
 .modal-overlay.active .modal {
-	transform: translateY(0);
+	transform: scale(1) translateY(0);
 }
 
 .modal-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	margin-bottom: var(--space-lg);
+	margin-bottom: var(--space-xl);
 }
 
 .modal-title {
-	font-size: var(--font-size-xl);
-	font-weight: 600;
+	font-size: var(--font-size-2xl);
+	font-weight: 700;
+	letter-spacing: -0.01em;
 }
 
 .modal-close {
-	width: 32px;
-	height: 32px;
+	width: 36px;
+	height: 36px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	border-radius: var(--radius-full);
 	color: var(--color-text-secondary);
 	transition: all var(--transition-fast);
+	border: 1px solid transparent;
 }
 
 .modal-close:hover {
 	background: var(--color-bg-elevated);
+	border-color: var(--color-border);
 	color: var(--color-text);
 }
 
 .modal-body {
-	margin-bottom: var(--space-lg);
+	margin-bottom: var(--space-xl);
 }
 
 .modal-footer {
@@ -547,28 +551,11 @@
 	flex: 1;
 }
 
-/* Desktop modal centering */
-@media (min-width: 768px) {
-	.modal-overlay {
-		align-items: center;
-	}
-
-	.modal {
-		border-radius: var(--radius-xl);
-		transform: translateY(20px) scale(0.95);
-	}
-
-	.modal-overlay.active .modal {
-		transform: translateY(0) scale(1);
-	}
-}
-
 /* ===== TOAST NOTIFICATIONS ===== */
 .toast-container {
 	position: fixed;
-	bottom: 100px;
-	left: 50%;
-	transform: translateX(-50%);
+	bottom: var(--space-xl);
+	right: var(--space-xl);
 	z-index: var(--z-toast);
 	display: flex;
 	flex-direction: column;
@@ -576,26 +563,28 @@
 }
 
 .toast {
-	background: var(--color-bg-elevated);
+	background: var(--color-bg-card);
 	color: var(--color-text);
-	padding: var(--space-md) var(--space-lg);
-	border-radius: var(--radius-md);
-	box-shadow: var(--shadow-lg);
+	padding: var(--space-md) var(--space-xl);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-xl);
 	display: flex;
 	align-items: center;
 	gap: var(--space-md);
-	animation: slide_up var(--transition-base) ease;
+	min-width: 300px;
+	border: 1px solid var(--color-border);
+	animation: toast_slide_in 0.3s ease-out;
 }
 
-@keyframes slide_up {
+@keyframes toast_slide_in {
 	from {
 		opacity: 0;
-		transform: translateY(20px);
+		transform: translateX(20px);
 	}
 
 	to {
 		opacity: 1;
-		transform: translateY(0);
+		transform: translateX(0);
 	}
 }
 
@@ -876,14 +865,8 @@
 /* Award grid layout */
 .award-grid {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
-	gap: var(--space-sm);
-}
-
-@media (max-width: 480px) {
-	.award-grid {
-		grid-template-columns: repeat(3, 1fr);
-	}
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: var(--space-md);
 }
 
 /* ===== LISTS ===== */
@@ -945,12 +928,14 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	margin-top: var(--space-xl);
 	margin-bottom: var(--space-md);
 }
 
 .chart-title {
 	font-size: var(--font-size-lg);
-	font-weight: 600;
+	font-weight: 700;
+	color: var(--color-text);
 }
 
 .chart-canvas {
@@ -1107,6 +1092,7 @@
 	color: var(--color-text-muted);
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
+	margin-top: var(--space-xl);
 	padding: var(--space-lg) 0 var(--space-sm);
 	display: flex;
 	align-items: center;
