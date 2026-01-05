@@ -61,6 +61,7 @@ const Router = {
 			"/stats": "view-stats",
 			"/records": "view-records",
 			"/awards": "view-awards",
+			"/leaderboard": "view-leaderboard",
 			"/settings": "view-settings"
 		}
 

@@ -181,6 +181,7 @@ function init() {
 	Router.register("/stats", render_stats_view)
 	Router.register("/records", render_records_view)
 	Router.register("/awards", render_awards_view)
+	Router.register("/leaderboard", render_leaderboard_view)
 	Router.register("/settings", render_settings_view)
 	Router.init()
 
@@ -1413,6 +1414,59 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 }
 
 /**
+ * Render Leaderboard view
+ */
+function render_leaderboard_view() {
+	const container = document.getElementById("leaderboard-content")
+
+	if (!container) {
+		return
+	}
+
+	const settings = State.get_settings()
+
+	container.innerHTML = `
+		<div class="section" id="leaderboard-section">
+			<div class="section-title" style="display: flex; align-items: center; gap: var(--space-sm);">
+				<span class="spinner" id="leaderboard-spinner" style="width: 16px; height: 16px; display: inline-block; display: none;"></span>
+			</div>
+			<div class="card" style="display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-sm);" id="leaderboard-tabs">
+				<button class="btn btn-primary btn-sm" data-type="daily">Daily</button>
+				<button class="btn btn-secondary btn-sm" data-type="weekly">Weekly</button>
+				<button class="btn btn-secondary btn-sm" data-type="longest_session">Longest</button>
+				<button class="btn btn-secondary btn-sm" data-type="total_awards">Awards</button>
+				<button class="btn btn-secondary btn-sm" data-type="overall">All-Time</button>
+			</div>
+			<div class="card" id="leaderboard-container"></div>
+		</div>
+	`
+
+	// Fetch and render leaderboard if endpoint is configured
+	load_leaderboard(settings.sync_endpoint, "daily")
+
+	// Add tab click handlers
+	const tabs_container = document.getElementById("leaderboard-tabs")
+
+	tabs_container?.addEventListener("click", (e) => {
+		const btn = e.target.closest("button[data-type]")
+
+		if (!btn) {
+			return
+		}
+
+		const type = btn.dataset.type
+
+		// Update active tab styling
+		tabs_container.querySelectorAll("button").forEach(b => {
+			b.className = b === btn ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm"
+		})
+
+		// Load the selected leaderboard
+		load_leaderboard(settings.sync_endpoint, type)
+	})
+}
+
+/**
  * Render Awards view
  */
 function render_awards_view() {
@@ -1483,21 +1537,6 @@ function render_awards_view() {
 	const global_percent = Math.round((award_count.unlocked / award_count.total) * 100) || 0
 
 	container.innerHTML = `
-		<div class="section" id="leaderboard-section">
-			<div class="section-title" style="display: flex; align-items: center; gap: var(--space-sm);">
-				<span>🏅</span> Leaderboard
-				<span class="spinner" id="leaderboard-spinner" style="width: 16px; height: 16px; display: inline-block;"></span>
-			</div>
-			<div class="card" style="display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-sm);" id="leaderboard-tabs">
-				<button class="btn btn-primary btn-sm" data-type="daily">Daily</button>
-				<button class="btn btn-secondary btn-sm" data-type="weekly">Weekly</button>
-				<button class="btn btn-secondary btn-sm" data-type="longest_session">Longest</button>
-				<button class="btn btn-secondary btn-sm" data-type="total_awards">Awards</button>
-				<button class="btn btn-secondary btn-sm" data-type="overall">All-Time</button>
-			</div>
-			<div class="card" id="leaderboard-container"></div>
-		</div>
-
 		<div class="section">
 			<div class="card" style="margin-bottom: var(--space-md); background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-primary) 100%); color: white; padding: 20px;">
 				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -1520,42 +1559,19 @@ function render_awards_view() {
 					<div style="font-size: var(--font-size-sm); font-weight: 600;">Hide Completed Awards</div>
 					<div class="toggle-switch">
 						<input type="checkbox" id="toggle-hide-completed" ${settings.hide_completed_awards ? "checked" : ""}>
-						<span class="slider" style="background-color: rgba(255,255,255,0.2);"></span>
+							<span class="slider" style="background-color: rgba(255,255,255,0.2);"></span>
 					</div>
 				</div>
 			</div>
-		</div>
+		</div >
 
 		${difficulties.map(render_section).join("")}
 
-		<p class="text-center text-muted" style="font-size: var(--font-size-xs); margin-top: var(--space-lg); opacity: 0.7;">
-			Tap or hover on an award to see its description and requirements.
-		</p>
+	<p class="text-center text-muted" style="font-size: var(--font-size-xs); margin-top: var(--space-lg); opacity: 0.7;">
+		Tap or hover on an award to see its description and requirements.
+	</p>
 	`
 
-	// Fetch and render leaderboard if endpoint is configured
-	load_leaderboard(settings.sync_endpoint, "daily")
-
-	// Add tab click handlers
-	const tabs_container = document.getElementById("leaderboard-tabs")
-
-	tabs_container?.addEventListener("click", (e) => {
-		const btn = e.target.closest("button[data-type]")
-
-		if (!btn) {
-			return
-		}
-
-		const type = btn.dataset.type
-
-		// Update active tab styling
-		tabs_container.querySelectorAll("button").forEach(b => {
-			b.className = b === btn ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm"
-		})
-
-		// Load the selected leaderboard
-		load_leaderboard(settings.sync_endpoint, type)
-	})
 
 	// Toggle hide completed listener
 	document.getElementById("toggle-hide-completed")?.addEventListener("change", (e) => {
@@ -1713,7 +1729,7 @@ function render_settings_view() {
             <div class="section">
                 <button type="submit" class="btn btn-primary btn-block">Save Settings</button>
             </div>
-        </form>
+        </form >
 
 		<div class="section">
 			<h3 class="section-title">Data</h3>
@@ -1728,8 +1744,8 @@ function render_settings_view() {
 					${Icons.trash} Reset All Data
 				</button>
 			</div>
-			</div>
 		</div>
+		</div >
 
 		<div class="section">
 			<div class="collapsible-header" id="whats-new-toggle" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: var(--space-sm) 0;">
@@ -1788,7 +1804,7 @@ function render_settings_view() {
 		State.update_settings({ last_backup: Date.now() })
 
 		const data = State.get_all_data()
-		Export.export_json(data, `steps-backup-${get_date_string(new Date())}.json`)
+		Export.export_json(data, `steps - backup - ${get_date_string(new Date())}.json`)
 		UI.show_toast("Data exported! Backup timer reset.", "success")
 	})
 
