@@ -558,10 +558,17 @@ function render_today_view() {
 
 	const settings = State.get_settings()
 	const today_entry = State.get_today_entry()
+	const entries = State.get_entries()
 
 	const steps = today_entry?.steps || 0
 	const goal = settings.daily_step_goal
 	const percentage = Calculations.goal_percentage(steps, goal)
+
+	// Get last 7 days of entries for mini chart
+	const today = new Date()
+	const week_ago = new Date()
+	week_ago.setDate(week_ago.getDate() - 6)
+	const week_entries = Calculations.get_entries_in_range(entries, week_ago, today)
 
 	container.innerHTML = `
         <div class="section">
@@ -589,18 +596,19 @@ function render_today_view() {
             </div>
             <div class="stat-card" style="animation-delay: 0.4s;">
                 <div class="stat-card-icon">${Icons.zap}</div>
-                <div class="stat-card-value">${UI.escapeHTML(String(Calculations.calculate_streak(State.get_entries(), goal, settings.include_weekends)))}</div>
+                <div class="stat-card-value">${UI.escapeHTML(String(Calculations.calculate_streak(entries, goal, settings.include_weekends)))}</div>
                 <div class="stat-card-label">Day Streak</div>
             </div>
         </div>
 
-        ${today_entry ? `
-            <div class="section">
-                <button class="btn btn-secondary btn-block" onclick="window.App.open_entry_modal('${UI.escapeHTML(today_entry.date)}')">
-                    Edit Today's Entry
-                </button>
+        <div class="section desktop-only">
+            <h3 class="section-title">Last 7 Days</h3>
+            <div class="card" style="padding: var(--space-md);">
+                <div style="height: 80px;">
+                    <canvas id="mini-weekly-chart"></canvas>
+                </div>
             </div>
-        ` : ""}
+        </div>
     `
 
 	// Render progress ring
@@ -610,6 +618,9 @@ function render_today_view() {
 		const ring = UI.render_progress_ring(percentage, UI.format_number(steps), `of ${UI.format_number(goal)} steps`)
 		ring_container.appendChild(ring)
 	}
+
+	// Render mini weekly chart
+	Charts.render_mini_weekly_chart("mini-weekly-chart", week_entries, goal)
 }
 
 /**
@@ -1661,6 +1672,7 @@ function render_settings_view() {
 						<li style="margin-bottom: var(--space-xs);"><strong>Additive Active Time</strong> - Same behavior for active time minutes.</li>
 						<li style="margin-bottom: var(--space-xs);"><strong>Themed Number Inputs</strong> - Custom +/- buttons with gradient styling that match the app theme.</li>
 						<li style="margin-bottom: var(--space-xs);"><strong>Hold-to-Accelerate</strong> - Hold the +/- buttons to increment faster. The longer you hold, the larger the step size (1 → 5 → 10 → 50 → 100).</li>
+						<li style="margin-bottom: var(--space-xs);"><strong>Weekly Mini Chart</strong> - Desktop users now see a compact bar chart of the last 7 days on the Today page.</li>
 						<li><strong>What's New Section</strong> - You're looking at it! Collapsed by default in Settings.</li>
 					</ul>
 				</div>

@@ -231,3 +231,14 @@
 .stack-lg {
 	gap: var(--space-lg);
 }
+
+/* Responsive visibility utilities */
+.desktop-only {
+	display: none;
+}
+
+@media (min-width: 768px) {
+	.desktop-only {
+		display: block;
+	}
+}

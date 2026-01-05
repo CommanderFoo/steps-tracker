@@ -210,6 +210,114 @@ const Charts = {
 	},
 
 	/**
+	 * Render mini weekly chart for Today page (last 7 days)
+	 * @param {string} canvas_id - Canvas element ID
+	 * @param {Array} entries - Last 7 days entries
+	 * @param {number} goal - Daily step goal
+	 * @param {string} today_date - Today's date string (YYYY-MM-DD)
+	 */
+	render_mini_weekly_chart(canvas_id, entries, goal, today_date) {
+		const ctx = document.getElementById(canvas_id)
+
+		if (!ctx) {
+			return
+		}
+
+		if (this.instances[canvas_id]) {
+			this.instances[canvas_id].destroy()
+		}
+
+		// Create map of date -> steps
+		const steps_map = {}
+
+		entries.forEach(entry => {
+			steps_map[entry.date] = entry.steps
+		})
+
+		// Generate last 7 days labels and data
+		const labels = []
+		const data = []
+		const day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+		for (let i = 6; i >= 0; i--) {
+			const date = new Date()
+			date.setDate(date.getDate() - i)
+			const date_str = get_date_string(date)
+			const day_name = day_names[date.getDay()]
+
+			labels.push(i === 0 ? "Today" : day_name)
+			data.push(steps_map[date_str] || 0)
+		}
+
+		// Color bars: green if goal met, purple if not, highlight today
+		const colors = data.map((steps, idx) => {
+			if (idx === 6) {
+				// Today - use gradient effect
+				return steps >= goal ? "#10b981" : "#818cf8"
+			}
+
+			return steps >= goal ? "#10b981" : "#6366f1"
+		})
+
+		this.instances[canvas_id] = new Chart(ctx, {
+			type: "bar",
+			data: {
+				labels,
+				datasets: [{
+					data,
+					backgroundColor: colors,
+					borderRadius: 4,
+					borderSkipped: false,
+					barThickness: "flex",
+					maxBarThickness: 32
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: {
+						display: false
+					},
+					tooltip: {
+						backgroundColor: "rgba(30, 41, 59, 0.9)",
+						titleColor: "#f1f5f9",
+						bodyColor: "#f1f5f9",
+						padding: 8,
+						cornerRadius: 6,
+						displayColors: false,
+						callbacks: {
+							label: (context) => {
+								const steps = context.raw
+								const met = steps >= goal ? " ✓" : ""
+
+								return `${steps.toLocaleString()} steps${met}`
+							}
+						}
+					}
+				},
+				scales: {
+					x: {
+						grid: {
+							display: false
+						},
+						ticks: {
+							color: "rgba(148, 163, 184, 0.8)",
+							font: {
+								size: 10
+							}
+						}
+					},
+					y: {
+						display: false,
+						beginAtZero: true
+					}
+				}
+			}
+		})
+	},
+
+	/**
 	 * Render monthly cumulative chart
 	 * @param {string} canvas_id - Canvas element ID
 	 * @param {Array} entries - Month entries sorted by date ascending
