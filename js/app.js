@@ -251,6 +251,96 @@ function setup_event_listeners() {
 	if (settings_form) {
 		settings_form.addEventListener("submit", handle_settings_submit)
 	}
+
+	// Number input buttons (custom +/- spinners with hold-to-repeat acceleration)
+	document.querySelectorAll(".number-input-btn").forEach(btn => {
+		let hold_interval = null
+		let hold_timeout = null
+		let tick_count = 0
+
+		const get_current_step = (base_step) => {
+			// Increase step size the longer you hold
+			if (tick_count < 5) {
+				return base_step
+			}
+
+			if (tick_count < 15) {
+				return base_step * 5
+			}
+
+			if (tick_count < 30) {
+				return base_step * 10
+			}
+
+			if (tick_count < 50) {
+				return base_step * 50
+			}
+
+			return base_step * 100
+		}
+
+		const perform_action = () => {
+			const target_id = btn.dataset.target
+			const input = document.getElementById(target_id)
+
+			if (!input) {
+				return
+			}
+
+			const base_step = parseInt(btn.dataset.step) || 1
+			const step = get_current_step(base_step)
+			const min = parseInt(input.min) || 0
+			const max = parseInt(input.max) || Infinity
+			let value = parseInt(input.value) || 0
+
+			if (btn.dataset.action === "increment") {
+				value = Math.min(value + step, max)
+			} else if (btn.dataset.action === "decrement") {
+				value = Math.max(value - step, min)
+			}
+
+			input.value = value
+			input.dispatchEvent(new Event("input", { bubbles: true }))
+			tick_count++
+		}
+
+		const start_holding = () => {
+			// Perform action immediately on press
+			tick_count = 0
+			perform_action()
+
+			// Start repeating after initial delay
+			hold_timeout = setTimeout(() => {
+				hold_interval = setInterval(perform_action, 80)
+			}, 400)
+		}
+
+		const stop_holding = () => {
+			if (hold_timeout) {
+				clearTimeout(hold_timeout)
+				hold_timeout = null
+			}
+
+			if (hold_interval) {
+				clearInterval(hold_interval)
+				hold_interval = null
+			}
+
+			tick_count = 0
+		}
+
+		btn.addEventListener("mousedown", start_holding)
+		btn.addEventListener("mouseup", stop_holding)
+		btn.addEventListener("mouseleave", stop_holding)
+
+		// Touch support
+		btn.addEventListener("touchstart", (e) => {
+			e.preventDefault()
+			start_holding()
+		})
+		btn.addEventListener("touchend", stop_holding)
+		btn.addEventListener("touchcancel", stop_holding)
+	})
 }
 
 /**
@@ -274,9 +364,13 @@ function open_entry_modal(date = null) {
 		if (entry) {
 			modal_title.textContent = "Edit Entry"
 			form.dataset.editDate = date
+			// Not additive - editing history replaces the total
+			delete form.dataset.isAdditive
 			date_input.value = entry.date
 			document.getElementById("entry-steps").value = entry.steps
+			document.getElementById("entry-steps").placeholder = "Steps"
 			document.getElementById("entry-time").value = entry.time_minutes || ""
+			document.getElementById("entry-time").placeholder = "Minutes"
 
 			if (delete_btn) {
 				delete_btn.classList.remove("hidden")
@@ -297,10 +391,15 @@ function open_entry_modal(date = null) {
 		const existing_entry = State.get_entry_by_date(today_date)
 
 		if (existing_entry) {
-			modal_title.textContent = "Update Today"
+			modal_title.textContent = "Add Steps"
 			form.dataset.editDate = today_date
-			document.getElementById("entry-steps").value = existing_entry.steps || ""
-			document.getElementById("entry-time").value = existing_entry.time_minutes || ""
+			// Mark as additive mode - steps will be added to existing count
+			form.dataset.isAdditive = "true"
+			// Start with empty inputs so user enters the values to add
+			document.getElementById("entry-steps").value = ""
+			document.getElementById("entry-steps").placeholder = `Current: ${existing_entry.steps.toLocaleString()}`
+			document.getElementById("entry-time").value = ""
+			document.getElementById("entry-time").placeholder = `Current: ${existing_entry.time_minutes || 0}`
 
 			if (delete_btn) {
 				delete_btn.classList.remove("hidden")
@@ -308,6 +407,9 @@ function open_entry_modal(date = null) {
 		} else {
 			modal_title.textContent = "Add Entry"
 			delete form.dataset.editDate
+			delete form.dataset.isAdditive
+			document.getElementById("entry-steps").placeholder = "Steps"
+			document.getElementById("entry-time").placeholder = "Minutes"
 
 			if (delete_btn) {
 				delete_btn.classList.add("hidden")
@@ -341,8 +443,18 @@ function handle_entry_submit(e) {
 	const settings = State.get_settings()
 
 	const date = document.getElementById("entry-date").value
-	const steps = parseInt(document.getElementById("entry-steps").value) || 0
-	const time_minutes = parseInt(document.getElementById("entry-time").value) || 0
+	let steps = parseInt(document.getElementById("entry-steps").value) || 0
+	let time_minutes = parseInt(document.getElementById("entry-time").value) || 0
+
+	// If additive mode (adding for today), add to existing counts
+	if (form.dataset.isAdditive === "true" && form.dataset.editDate) {
+		const existing_entry = State.get_entry_by_date(form.dataset.editDate)
+
+		if (existing_entry) {
+			steps += existing_entry.steps || 0
+			time_minutes += existing_entry.time_minutes || 0
+		}
+	}
 
 	// Calculate derived values
 	const distance_km = Calculations.calculate_distance(steps, settings.stride_length_cm)
@@ -1534,6 +1646,27 @@ function render_settings_view() {
 			</div>
 		</div>
 
+		<div class="section">
+			<div class="collapsible-header" id="whats-new-toggle" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: var(--space-sm) 0;">
+				<h3 class="section-title" style="margin: 0;">What's New</h3>
+				<span class="collapsible-icon" style="transition: transform var(--transition-fast);">${Icons.chevron_right}</span>
+			</div>
+			<div class="collapsible-content" id="whats-new-content" style="display: none; padding-top: var(--space-md);">
+				<div class="card" style="font-size: var(--font-size-sm);">
+					<div style="margin-bottom: var(--space-md);">
+						<strong style="color: var(--color-primary);">January 5, 2026</strong>
+					</div>
+					<ul style="margin: 0; padding-left: var(--space-lg); color: var(--color-text-secondary);">
+						<li style="margin-bottom: var(--space-xs);"><strong>Additive Steps for Today</strong> - When adding steps for today, they now add to your existing count instead of replacing it. Editing from history still replaces the total.</li>
+						<li style="margin-bottom: var(--space-xs);"><strong>Additive Active Time</strong> - Same behavior for active time minutes.</li>
+						<li style="margin-bottom: var(--space-xs);"><strong>Themed Number Inputs</strong> - Custom +/- buttons with gradient styling that match the app theme.</li>
+						<li style="margin-bottom: var(--space-xs);"><strong>Hold-to-Accelerate</strong> - Hold the +/- buttons to increment faster. The longer you hold, the larger the step size (1 → 5 → 10 → 50 → 100).</li>
+						<li><strong>What's New Section</strong> - You're looking at it! Collapsed by default in Settings.</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+
 		<div style="text-align: center; margin-top: var(--space-xl); opacity: 0.6;">
 			<a href="https://github.com/CommanderFoo/steps-tracker" target="_blank" style="color: var(--color-text); text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
 				<svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
@@ -1627,6 +1760,25 @@ function render_settings_view() {
 		document.getElementById("setting-secret-key").value = ""
 		UI.show_toast("Sync settings cleared. Click Save to apply.", "warning")
 	})
+
+	// What's New collapsible toggle
+	const whats_new_toggle = document.getElementById("whats-new-toggle")
+	const whats_new_content = document.getElementById("whats-new-content")
+
+	if (whats_new_toggle && whats_new_content) {
+		whats_new_toggle.addEventListener("click", () => {
+			const icon = whats_new_toggle.querySelector(".collapsible-icon")
+			const is_open = whats_new_content.style.display !== "none"
+
+			if (is_open) {
+				whats_new_content.style.display = "none"
+				icon.style.transform = "rotate(0deg)"
+			} else {
+				whats_new_content.style.display = "block"
+				icon.style.transform = "rotate(90deg)"
+			}
+		})
+	}
 }
 
 /**

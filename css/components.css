@@ -318,6 +318,69 @@
 	color: var(--color-text-muted);
 }
 
+/* Number input spinner buttons - hide native spinners */
+.form-input[type="number"]::-webkit-inner-spin-button,
+.form-input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.form-input[type="number"] {
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+/* Custom number input wrapper with themed buttons */
+.number-input-wrapper {
+	display: flex;
+	align-items: stretch;
+	gap: 0;
+}
+
+.number-input-wrapper .form-input {
+	flex: 1;
+	border-radius: 0;
+	text-align: center;
+	min-width: 0;
+}
+
+.number-input-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	background: var(--gradient-primary);
+	border: none;
+	color: white;
+	font-size: var(--font-size-xl);
+	font-weight: 600;
+	cursor: pointer;
+	transition: all var(--transition-fast);
+	user-select: none;
+}
+
+.number-input-btn:first-child {
+	border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.number-input-btn:last-child {
+	border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.number-input-btn:hover {
+	filter: brightness(1.1);
+}
+
+.number-input-btn:active {
+	filter: brightness(0.9);
+	transform: scale(0.95);
+}
+
+.number-input-btn svg {
+	width: 20px;
+	height: 20px;
+}
+
 .form-input-lg {
 	padding: var(--space-lg);
 	font-size: var(--font-size-2xl);
