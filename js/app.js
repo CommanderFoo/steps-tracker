@@ -1758,6 +1758,8 @@ function render_settings_view() {
 						<strong style="color: var(--color-primary);">January 5, 2026</strong>
 					</div>
 					<ul style="margin: 0; padding-left: var(--space-lg); color: var(--color-text-secondary);">
+						<li style="margin-bottom: var(--space-xs);"><strong>Dedicated Leaderboard</strong> - Leaderboard now has its own dedicated page (podium icon) for easier access to stats.</li>
+						<li style="margin-bottom: var(--space-xs);"><strong>Better Awards Notifications</strong> - New award count now appears in a notification bubble.</li>
 						<li style="margin-bottom: var(--space-xs);"><strong>Hide Completed Awards</strong> - You can now hide achieved awards from your collection to focus on what's left. Toggle it on the Awards page or in Settings.</li>
 						<li style="margin-bottom: var(--space-xs);"><strong>Additive Steps for Today</strong> - When adding steps for today, they now add to your existing count instead of replacing it. Editing from history still replaces the total.</li>
 						<li style="margin-bottom: var(--space-xs);"><strong>Additive Active Time</strong> - Same behavior for active time minutes.</li>
