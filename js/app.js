@@ -49,6 +49,9 @@ function trigger_sync() {
 	const awards = State.get("awards")
 	const award_count = Awards.get_count(awards).unlocked
 
+	// Calculate best streak
+	const best_streak = Calculations.calculate_best_streak(entries, settings.daily_step_goal, settings.include_weekends)
+
 	// Build stats object to sync
 	const sync_stats = {
 		total_steps: all_stats.total_steps,
@@ -58,7 +61,9 @@ function trigger_sync() {
 		daily_calories: daily_calories,
 		weekly_calories: week_stats.total_calories,
 		longest_session: longest_session,
-		total_awards: award_count
+		total_awards: award_count,
+		total_time: all_stats.total_time_minutes,
+		best_streak: best_streak
 	}
 
 	Sync.sync_to_leaderboard(settings.sync_endpoint, settings.secret_key, sync_stats)
@@ -1346,6 +1351,7 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 	// Check leaderboard type
 	const is_longest = type === "longest_session"
 	const is_awards = type === "total_awards"
+	const is_overall = type === "overall"
 
 	// Render leaderboard rows
 	const rows_html = result.leaderboard.map(entry => {
@@ -1386,6 +1392,23 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 			`
 		}
 
+		if (is_overall) {
+			return `
+				<div class="list-item" style="margin-bottom: var(--space-sm);">
+					<div class="list-item-icon" style="font-weight: 700; font-size: 1.1em; min-width: 40px; ${rank_style}">
+						${rank_emoji}
+					</div>
+					<div class="list-item-content" style="flex: 1;">
+						<div class="list-item-title">${UI.escapeHTML(entry.name)}</div>
+					</div>
+					<div style="text-align: right; min-width: 70px; font-weight: 600;">${UI.format_number(entry.steps)}</div>
+					<div style="text-align: right; min-width: 55px; color: var(--color-text-muted); font-size: 0.85em;">${UI.format_number(entry.calories)}</div>
+					<div style="text-align: right; min-width: 55px; color: var(--color-text-muted); font-size: 0.85em;">${UI.format_duration(entry.total_time)}</div>
+					<div style="text-align: right; min-width: 40px; color: var(--color-text-muted); font-size: 0.85em;">${entry.best_streak}d</div>
+				</div>
+			`
+		}
+
 		return `
 			<div class="list-item" style="margin-bottom: var(--space-sm);">
 				<div class="list-item-icon" style="font-weight: 700; font-size: 1.1em; min-width: 40px; ${rank_style}">
@@ -1417,6 +1440,17 @@ async function load_leaderboard(endpoint, type = "total_steps") {
 				<div style="min-width: 40px;"></div>
 				<div style="flex: 1;">Name</div>
 				<div style="text-align: right; min-width: 80px;">Awards</div>
+			</div>
+		`
+	} else if (is_overall) {
+		header_html = `
+			<div class="list-item" style="margin-bottom: var(--space-sm); padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-border); font-size: 0.8em; color: var(--color-text-muted);">
+				<div style="min-width: 40px;"></div>
+				<div style="flex: 1;">Name</div>
+				<div style="text-align: right; min-width: 70px;">Steps</div>
+				<div style="text-align: right; min-width: 55px;">Cals</div>
+				<div style="text-align: right; min-width: 55px;">Time</div>
+				<div style="text-align: right; min-width: 40px;">Streak</div>
 			</div>
 		`
 	} else {

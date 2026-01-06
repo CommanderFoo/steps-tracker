@@ -68,6 +68,14 @@ const Sync = {
 				url.searchParams.set("total_awards", Math.floor(stats.total_awards).toString())
 			}
 
+			if (typeof stats.total_time === "number") {
+				url.searchParams.set("total_time", Math.floor(stats.total_time).toString())
+			}
+
+			if (typeof stats.best_streak === "number") {
+				url.searchParams.set("best_streak", Math.floor(stats.best_streak).toString())
+			}
+
 			const response = await fetch(url.toString(), {
 				method: "GET",
 				mode: "cors"
