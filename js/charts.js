@@ -269,7 +269,7 @@ const Charts = {
 					borderRadius: 4,
 					borderSkipped: false,
 					barThickness: "flex",
-					maxBarThickness: 32
+					maxBarThickness: 100
 				}]
 			},
 			options: {
