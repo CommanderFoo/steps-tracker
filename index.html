@@ -13,10 +13,10 @@
 	<link rel="icon"
 		href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👟</text></svg>">
 
-	<link rel="stylesheet" href="css/theme.css?v=6">
-	<link rel="stylesheet" href="css/base.css?v=6">
-	<link rel="stylesheet" href="css/layout.css?v=6">
-	<link rel="stylesheet" href="css/components.css?v=6">
+	<link rel="stylesheet" href="css/theme.css?v=7">
+	<link rel="stylesheet" href="css/base.css?v=7">
+	<link rel="stylesheet" href="css/layout.css?v=7">
+	<link rel="stylesheet" href="css/components.css?v=7">
 
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -179,7 +179,8 @@
 			<!-- Leaderboard View -->
 			<section id="view-leaderboard" class="view">
 				<header class="page-header">
-					<h1>Leaderboard</h1>
+					<h1>Leaderboard <span class="spinner" id="leaderboard-spinner"
+							style="width: 16px; height: 16px; display: none;"></span></h1>
 				</header>
 				<div id="leaderboard-content">
 					<!-- Rendered by JS -->
@@ -284,7 +285,7 @@
 	</div>
 
 	<!-- App Script (bump version to bust cache) -->
-	<script type="module" src="js/app.js?v=6"></script>
+	<script type="module" src="js/app.js?v=7"></script>
 
 	<!-- Set today's date in header -->
 	<script>

@@ -1447,9 +1447,6 @@ function render_leaderboard_view() {
 
 	container.innerHTML = `
 		<div class="section" id="leaderboard-section">
-			<div class="section-title" style="display: flex; align-items: center; gap: var(--space-sm);">
-				<span class="spinner" id="leaderboard-spinner" style="width: 16px; height: 16px; display: inline-block; display: none;"></span>
-			</div>
 			<div class="card" style="display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-bottom: var(--space-sm);" id="leaderboard-tabs">
 				<button class="btn btn-primary btn-sm" data-type="daily">Daily</button>
 				<button class="btn btn-secondary btn-sm" data-type="weekly">Weekly</button>
