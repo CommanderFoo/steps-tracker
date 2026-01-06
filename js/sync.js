@@ -30,6 +30,11 @@ const Sync = {
 
 			url.searchParams.set("key", secret_key.trim())
 
+			// Add timezone offset in minutes (negated because getTimezoneOffset returns opposite sign)
+			// e.g., UK = 0, EST = -300, NZ = +780
+			const tz_offset = -new Date().getTimezoneOffset()
+			url.searchParams.set("tz", tz_offset.toString())
+
 			// Add all stats as query params
 			if (typeof stats.total_steps === "number") {
 				url.searchParams.set("total_steps", Math.floor(stats.total_steps).toString())
@@ -93,6 +98,10 @@ const Sync = {
 
 			base_url.pathname = "/leaderboard"
 			base_url.searchParams.set("type", type)
+
+			// Add timezone offset for daily/weekly filtering
+			const tz_offset = -new Date().getTimezoneOffset()
+			base_url.searchParams.set("tz", tz_offset.toString())
 
 			const response = await fetch(base_url.toString(), {
 				method: "GET",
