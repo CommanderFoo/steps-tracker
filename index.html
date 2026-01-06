@@ -13,10 +13,10 @@
 	<link rel="icon"
 		href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👟</text></svg>">
 
-	<link rel="stylesheet" href="css/theme.css?v=5">
-	<link rel="stylesheet" href="css/base.css?v=5">
-	<link rel="stylesheet" href="css/layout.css?v=5">
-	<link rel="stylesheet" href="css/components.css?v=5">
+	<link rel="stylesheet" href="css/theme.css?v=6">
+	<link rel="stylesheet" href="css/base.css?v=6">
+	<link rel="stylesheet" href="css/layout.css?v=6">
+	<link rel="stylesheet" href="css/components.css?v=6">
 
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -88,7 +88,7 @@
 					<span>Awards</span>
 					<span class="nav-badge" id="awards-badge"></span>
 				</li>
-				<li class="nav-item" data-route="/leaderboard">
+				<li class="nav-item hidden" data-route="/leaderboard" id="nav-leaderboard">
 					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
 						stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M18 20V10" />
@@ -284,7 +284,7 @@
 	</div>
 
 	<!-- App Script (bump version to bust cache) -->
-	<script type="module" src="js/app.js?v=5"></script>
+	<script type="module" src="js/app.js?v=6"></script>
 
 	<!-- Set today's date in header -->
 	<script>

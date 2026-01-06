@@ -174,6 +174,10 @@ function init() {
 	// Retroactively check all entries for any missing awards
 	retroactive_check_awards()
 
+	// Update navigation visibility
+	update_nav_visibility()
+	State.subscribe(update_nav_visibility)
+
 	// Initialize router
 	Router.register("/", render_today_view)
 	Router.register("/history", render_history_view)
@@ -262,6 +266,22 @@ function update_awards_badge() {
 	const new_count = State.get_new_awards().length
 
 	badge.textContent = new_count > 0 ? new_count : ""
+}
+
+/**
+ * Update navigation visibility based on settings
+ */
+function update_nav_visibility() {
+	const settings = State.get_settings()
+	const nav_leaderboard = document.getElementById("nav-leaderboard")
+
+	if (nav_leaderboard) {
+		if (settings.sync_endpoint) {
+			nav_leaderboard.classList.remove("hidden")
+		} else {
+			nav_leaderboard.classList.add("hidden")
+		}
+	}
 }
 
 /**
