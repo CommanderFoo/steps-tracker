@@ -1,0 +1,24 @@
+-- Users table schema (current structure)
+CREATE TABLE users (
+	id integer PRIMARY KEY autoincrement,
+	name TEXT,
+	key TEXT,
+	total_steps integer DEFAULT 0,
+	total_calories INTEGER DEFAULT 0,
+	total_daily_steps INTEGER,
+	total_weekly_steps INTEGER,
+	total_daily_calories INTEGER,
+	total_weekly_calories INTEGER,
+	longest_session INTEGER DEFAULT 0,
+	total_awards INTEGER DEFAULT 0,
+	timezone_offset INTEGER DEFAULT 0,
+	daily_date TEXT,
+	weekly_start_date TEXT,
+	total_time INTEGER DEFAULT 0,
+	best_streak INTEGER DEFAULT 0,
+	last_synced_at DATETIME
+);
+
+-- Migration: Add All Time leaderboard columns
+ALTER TABLE users ADD COLUMN total_time INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN best_streak INTEGER DEFAULT 0;
